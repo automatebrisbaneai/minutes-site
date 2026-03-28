@@ -1,0 +1,145 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import pb from "@/lib/pocketbase";
+import { formatDate } from "@/lib/utils";
+import type { Meeting, CommitteeMember, AgendaItem } from "@/lib/types";
+
+export default function PrintableAgenda() {
+  const params = useParams();
+  const id = params.id as string;
+
+  const [meeting, setMeeting] = useState<Meeting | null>(null);
+  const [members, setMembers] = useState<CommitteeMember[]>([]);
+  const [items, setItems] = useState<AgendaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const [mtg, mtgMembers, agendaItems] = await Promise.all([
+        pb.collection("mt_meetings").getOne<Meeting>(id),
+        pb.collection("mt_committee").getFullList<CommitteeMember>({
+          filter: `meeting="${id}"`,
+          sort: "order",
+        }),
+        pb.collection("mt_agenda_items").getFullList<AgendaItem>({
+          filter: `meeting="${id}"`,
+          sort: "number",
+        }),
+      ]);
+      setMeeting(mtg);
+      setMembers(mtgMembers);
+      setItems(agendaItems);
+      setLoading(false);
+    }
+    load();
+  }, [id]);
+
+  if (loading) return <p className="p-8 text-gray-400">Loading...</p>;
+  if (!meeting) return <p className="p-8 text-red-600">Meeting not found.</p>;
+
+  return (
+    <main className="max-w-2xl mx-auto px-10 py-12 print:px-0 print:py-0">
+      <div className="no-print mb-6 flex gap-4">
+        <button
+          onClick={() => window.print()}
+          className="bg-[var(--brand-maroon)] text-white text-sm font-bold px-4 py-2 rounded hover:bg-[var(--color-maroon-hover)]"
+        >
+          Print
+        </button>
+        <a
+          href={`/m/${id}`}
+          className="text-sm text-[var(--brand-maroon)] hover:underline self-center"
+        >
+          &larr; Back to meeting
+        </a>
+      </div>
+
+      {/* Header */}
+      <div className="border-b-2 border-[var(--brand-maroon)] pb-4 mb-6">
+        <h1 className="text-2xl mb-1">{meeting.club_name}</h1>
+        <h2 className="text-base font-bold text-[var(--text-dark)] uppercase tracking-wide">
+          Committee Meeting Agenda
+        </h2>
+        <div className="mt-2 text-sm text-gray-600 space-y-0.5">
+          <p>
+            <strong>Date:</strong> {formatDate(meeting.meeting_date)}
+          </p>
+          {meeting.meeting_time && (
+            <p>
+              <strong>Time:</strong> {meeting.meeting_time}
+            </p>
+          )}
+          {meeting.venue && (
+            <p>
+              <strong>Venue:</strong> {meeting.venue}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Attending */}
+      {members.length > 0 && (
+        <div className="mb-6">
+          <table className="w-full text-sm border border-gray-300">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="text-left px-3 py-2 border-b border-gray-300">Name</th>
+                <th className="text-left px-3 py-2 border-b border-gray-300">Role</th>
+                <th className="text-left px-3 py-2 border-b border-gray-300">Present</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((m) => (
+                <tr key={m.id} className="border-b border-gray-200">
+                  <td className="px-3 py-2">{m.name}</td>
+                  <td className="px-3 py-2 capitalize">{m.role}</td>
+                  <td className="px-3 py-2 w-16"></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-gray-500 mt-1">
+            <strong>Apologies:</strong> ___________________________
+          </p>
+        </div>
+      )}
+
+      {/* Agenda items */}
+      <div className="space-y-6">
+        {items.map((item) => (
+          <div key={item.id}>
+            <div className="flex items-start gap-3">
+              <span className="font-bold text-[var(--brand-maroon)] text-sm w-6 shrink-0">
+                {item.number}.
+              </span>
+              <div className="flex-1">
+                <p className="font-bold text-sm">{item.title}</p>
+                {item.description && (
+                  <p className="text-sm text-gray-600 mt-0.5">{item.description}</p>
+                )}
+                {item.item_type === "decision" && (
+                  <div className="mt-2 text-xs text-gray-400 border-t border-dashed border-gray-200 pt-2">
+                    Moved: ___________________ &nbsp;&nbsp; Seconded: ___________________ &nbsp;&nbsp; Carried / Not carried
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-12 pt-6 border-t border-gray-200 text-xs text-gray-400">
+        <p>
+          Generated by CAQ Meeting Minutes Tool &nbsp;&bull;&nbsp; minutes.croquetwade.com
+        </p>
+        <p className="mt-1">
+          Record decisions, not discussions. For each decision: what was resolved, who
+          moved, who seconded, carried or lost.
+        </p>
+      </div>
+    </main>
+  );
+}

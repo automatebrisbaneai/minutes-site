@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  --brand-maroon: #73182C;
+  --brand-green: #82b25e;
+  --brand-cream: #FCF6DA;
+  --text-dark: #37352F;
+  --highlight: #847a58;
+
+  --background: #FCF6DA;
+  --foreground: #37352F;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-maroon: #73182C;
+  --color-maroon-hover: #8a1e35;
+  --color-green: #82b25e;
+  --color-cream: #FCF6DA;
+  --color-gold: #847a58;
+  --color-text-dark: #37352F;
+  --font-sans: var(--font-lato), sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-lato), sans-serif;
+}
+
+h1 {
+  font-family: var(--font-lato), sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--brand-maroon);
+}
+
+h2 {
+  font-family: var(--font-lato), sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--brand-maroon);
+}
+
+h3 {
+  font-family: var(--font-lato), sans-serif;
+  font-weight: 700;
+  color: var(--brand-maroon);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--brand-maroon);
+}
+
+/* Print styles */
+@media print {
+  nav, .no-print { display: none !important; }
+  body { background: white; }
+}
