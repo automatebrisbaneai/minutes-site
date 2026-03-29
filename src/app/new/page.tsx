@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import pb from "@/lib/pocketbase";
-import { generateShareCode } from "@/lib/utils";
+import { generateShareCode, generatePin } from "@/lib/utils";
 import { TEMPLATE_AGENDA_ITEMS, type CommitteeRole } from "@/lib/types";
 
 interface CommitteeMemberRow {
@@ -23,6 +23,8 @@ export default function NewMeetingPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [createdPin, setCreatedPin] = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   const [clubName, setClubName] = useState("");
   const [meetingDate, setMeetingDate] = useState("");
@@ -59,6 +61,8 @@ export default function NewMeetingPage() {
     setError("");
 
     try {
+      const pin = generatePin();
+
       // Create meeting
       const meeting = await pb.collection("mt_meetings").create({
         club_name: clubName,
@@ -67,6 +71,7 @@ export default function NewMeetingPage() {
         venue: venue,
         status: "draft",
         share_code: generateShareCode(),
+        pin,
       });
 
       // Create committee members
@@ -92,12 +97,46 @@ export default function NewMeetingPage() {
         )
       );
 
-      router.push(`/m/${meeting.id}`);
+      // Show PIN before redirecting
+      setCreatedPin(pin);
+      setCreatedId(meeting.id);
     } catch (err) {
       setError("Something went wrong. Please try again.");
       console.error(err);
       setSaving(false);
     }
+  }
+
+  // PIN confirmation screen — shown after meeting is created
+  if (createdPin && createdId) {
+    return (
+      <main className="max-w-xl mx-auto px-6 py-12">
+        <div className="text-center">
+          <p className="text-sm font-bold tracking-widest text-[var(--brand-green)] uppercase mb-2">
+            Meeting Created
+          </p>
+          <h1 className="text-2xl mb-6">Write down your PIN</h1>
+
+          <div className="inline-block bg-[var(--brand-cream)] border-2 border-[var(--brand-maroon)] rounded-lg px-12 py-8 mb-6">
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Your PIN</p>
+            <p className="text-5xl font-bold tracking-widest text-[var(--brand-maroon)]">
+              {createdPin}
+            </p>
+          </div>
+
+          <p className="text-sm text-gray-600 leading-relaxed mb-8 max-w-sm mx-auto">
+            You&apos;ll need this PIN to access your meeting dashboard. Save it somewhere — it&apos;s the only way back in if you lose the link.
+          </p>
+
+          <button
+            onClick={() => router.push(`/m/${createdId}`)}
+            className="bg-[var(--brand-maroon)] text-white font-bold uppercase tracking-widest text-sm px-8 py-3 rounded hover:bg-[var(--color-maroon-hover)] transition-colors"
+          >
+            Go to Meeting Dashboard &rarr;
+          </button>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -109,7 +148,12 @@ export default function NewMeetingPage() {
         &larr; Back
       </Link>
 
-      <h1 className="text-2xl mb-8">New Meeting</h1>
+      <div className="mb-8">
+        <p className="text-sm font-bold tracking-widest text-[var(--brand-green)] uppercase mb-1">
+          Full Mode
+        </p>
+        <h1 className="text-2xl">New Meeting</h1>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Meeting details */}

@@ -48,6 +48,12 @@ export default function MeetingDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // PIN gate
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [pinChecking, setPinChecking] = useState(false);
+
   // Agenda editing state
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItemTitle, setNewItemTitle] = useState("");
@@ -58,6 +64,36 @@ export default function MeetingDashboard() {
   // Upload state
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Check sessionStorage for verified PIN on mount
+  useEffect(() => {
+    const key = `pin_verified_${id}`;
+    if (sessionStorage.getItem(key) === "1") {
+      setPinVerified(true);
+    }
+  }, [id]);
+
+  async function checkPin() {
+    if (!pinInput || pinInput.length !== 4) {
+      setPinError("Enter your 4-digit PIN.");
+      return;
+    }
+    setPinChecking(true);
+    setPinError("");
+    try {
+      const mtg = await pb.collection("mt_meetings").getOne<Meeting>(id);
+      if (mtg.pin === pinInput) {
+        sessionStorage.setItem(`pin_verified_${id}`, "1");
+        setPinVerified(true);
+      } else {
+        setPinError("Incorrect PIN. Try again.");
+      }
+    } catch {
+      setPinError("Meeting not found.");
+    } finally {
+      setPinChecking(false);
+    }
+  }
 
   const loadData = useCallback(async () => {
     try {
@@ -93,8 +129,8 @@ export default function MeetingDashboard() {
   }, [id]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (pinVerified) loadData();
+  }, [loadData, pinVerified]);
 
   async function addAgendaItem() {
     if (!newItemTitle.trim()) return;
@@ -190,6 +226,45 @@ export default function MeetingDashboard() {
       ) : (
         <span key={i}>{part}</span>
       )
+    );
+  }
+
+  // PIN gate screen
+  if (!pinVerified) {
+    return (
+      <main className="max-w-sm mx-auto px-6 py-24 text-center">
+        <p className="text-sm font-bold tracking-widest text-[var(--brand-green)] uppercase mb-2">
+          Full Mode
+        </p>
+        <h1 className="text-2xl mb-2">Enter PIN</h1>
+        <p className="text-sm text-gray-500 mb-8">
+          Enter the 4-digit PIN you received when you created this meeting.
+        </p>
+        <div className="flex flex-col items-center gap-4">
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={4}
+            value={pinInput}
+            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            onKeyDown={(e) => e.key === "Enter" && checkPin()}
+            placeholder="0000"
+            className="text-center text-3xl tracking-widest w-32 border-2 border-gray-300 rounded px-3 py-3 focus:outline-none focus:border-[var(--brand-maroon)]"
+            autoFocus
+          />
+          {pinError && <p className="text-red-600 text-sm">{pinError}</p>}
+          <button
+            onClick={checkPin}
+            disabled={pinChecking || pinInput.length !== 4}
+            className="bg-[var(--brand-maroon)] text-white font-bold uppercase tracking-widest text-sm px-8 py-3 rounded hover:bg-[var(--color-maroon-hover)] disabled:opacity-50 transition-colors"
+          >
+            {pinChecking ? "Checking..." : "Enter"}
+          </button>
+        </div>
+        <Link href="/" className="text-xs text-gray-400 hover:underline mt-8 inline-block">
+          &larr; Home
+        </Link>
+      </main>
     );
   }
 

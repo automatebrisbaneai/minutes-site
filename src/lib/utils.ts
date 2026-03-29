@@ -19,3 +19,7 @@ export function formatDate(dateStr: string): string {
 export function generateShareCode(): string {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 }
+
+export function generatePin(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}

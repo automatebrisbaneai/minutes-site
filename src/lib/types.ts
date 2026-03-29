@@ -15,6 +15,25 @@ export interface Meeting {
   venue: string;
   status: MeetingStatus;
   share_code: string;
+  pin: string;
+  created: string;
+  updated: string;
+}
+
+// Simple mode — single job record
+export type JobStatus = "uploaded" | "processing" | "done" | "failed";
+
+export interface Job {
+  id: string;
+  club_name: string;
+  meeting_date: string;
+  email: string;
+  agenda_text: string;
+  recording: string;
+  status: JobStatus;
+  transcript: string;
+  minutes_content: string;
+  minutes_style: "motions" | "summary";
   created: string;
   updated: string;
 }
